@@ -1,0 +1,21 @@
+# Dependencies & build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Runtime data (SQLite DB, upload temp files, local storage, legacy JSON DB)
+data/
+apps/web/data/
+.backup/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

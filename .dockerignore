@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+.env
+.env.*
+!.env.example
+data
+apps/web/data
+.backup
+.git
+tests
+*.log

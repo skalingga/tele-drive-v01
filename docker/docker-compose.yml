@@ -1,0 +1,21 @@
+services:
+  teledrive:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: teledrive
+    restart: unless-stopped
+    # Keep exactly ONE replica: MTProto sessions must not be shared between processes.
+    ports:
+      - "127.0.0.1:3000:3000" # put a TLS reverse proxy in front for public access
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"
+    volumes:
+      - teledrive_data:/app/data
+    stop_grace_period: 30s
+
+volumes:
+  teledrive_data:

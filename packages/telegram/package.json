@@ -1,0 +1,21 @@
+{
+  "name": "@teledrive/telegram",
+  "version": "1.2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@teledrive/shared": "*",
+    "@teledrive/storage": "*",
+    "big-integer": "^1.6.52",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.4.5"
+  }
+}

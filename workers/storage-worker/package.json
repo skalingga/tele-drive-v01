@@ -1,0 +1,21 @@
+{
+  "name": "@teledrive/storage-worker",
+  "version": "1.2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@teledrive/shared": "*",
+    "@teledrive/database": "*",
+    "@teledrive/storage": "*",
+    "@teledrive/telegram-connector": "*",
+    "@teledrive/telegram": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^24.0.0"
+  },
+  "types": "./dist/index.d.ts"
+}

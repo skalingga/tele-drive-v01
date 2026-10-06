@@ -1,0 +1,27 @@
+{
+  "name": "teledrive-monorepo",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "workers/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:packages": "npm run build -w @teledrive/shared && npm run build -w @teledrive/database && npm run build -w @teledrive/storage && npm run build -w @teledrive/telegram && npm run build -w @teledrive/telegram-connector && npm run build -w @teledrive/storage-worker",
+    "build": "npm run build:packages && npm run build -w @teledrive/web",
+    "dev": "npm run build:packages && npm run dev -w @teledrive/web",
+    "start": "npm run start -w @teledrive/web",
+    "typecheck": "npm run build:packages && npm run typecheck -w @teledrive/web",
+    "test": "npm run build:packages && node --test \"tests/**/*.test.js\"",
+    "test:only": "node --test \"tests/**/*.test.js\""
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^24.0.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
