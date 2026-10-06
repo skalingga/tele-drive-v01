@@ -19,3 +19,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Local secret backups
+TELEGRAM_SESSION_ENCRYPTION_KEY.txt
