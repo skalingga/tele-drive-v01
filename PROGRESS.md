@@ -8,12 +8,14 @@ TeleDrive v1.3 berjalan: login QR Telegram, upload/download ke channel "TeleDriv
 - [2026-10-07] Download paralel lewat pool koneksi (±1–2 MB/s); download besar tidak memakai koneksi utama agar upload tidak tersendat.
 - [2026-10-07] Image Docker (`docker/Dockerfile`) ter-build dan berjalan; repo GitHub `skalingga/tele-drive-v01` (private).
 - [2026-10-07] Perbaikan UI: menu ⋮ yang mati (Preview/Download/Rename/Move/Trash), klik kanan, keyboard, toast Urungkan, layout ponsel.
+- [2026-10-07] Persiapan deploy VPS: `deploy/docker-compose.prod.yml` (TeleDrive + Caddy HTTPS), `deploy/setup-vps.sh`, `docs/DEPLOY.md`.
 - [2026-10-07] CLAUDE.md + SYNC.md (aturan sinkronisasi PC ↔ cloud) dan PROGRESS.md.
 
 ## Sedang dikerjakan
-- Tidak ada.
+- Deploy produksi ke VPS (Ubuntu 24.04, 2 vCPU/2 GB) di `drive.skalingga.my.id`: file siap (`deploy/`, `docs/DEPLOY.md`), menunggu user menjalankan di VPS.
 
 ## Langkah berikutnya
+0. User: ikuti `docs/DEPLOY.md` di VPS (DNS A record `drive` → IP VPS, deploy key, isi `.env`, `docker compose up`). Vercel tidak cocok (butuh proses long-running + SQLite).
 1. Uji UI baru dengan file asli di container (`http://localhost:3000`).
 2. Uji upload dari UI (antrean dua fase + progress).
 3. Nanti: login dengan akun ber-2FA, lalu persiapan multi-user (HTTPS reverse proxy, CI).

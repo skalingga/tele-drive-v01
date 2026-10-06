@@ -1,0 +1,14 @@
+# Caddy mengurus sertifikat HTTPS (Let's Encrypt) otomatis untuk {$DOMAIN}.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy teledrive:3000 {
+		# Upload/download besar: jangan batasi waktu.
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+	request_body {
+		max_size 2100MB
+	}
+}

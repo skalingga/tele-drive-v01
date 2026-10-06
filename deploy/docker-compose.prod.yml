@@ -1,0 +1,42 @@
+# Produksi: TeleDrive (1 instance) + Caddy (HTTPS otomatis).
+# Jalankan dari folder repo di VPS:
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+services:
+  teledrive:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: teledrive
+    restart: unless-stopped
+    # Tepat SATU instance: proses ini pemilik semua session MTProto (ADR-007).
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"
+    volumes:
+      # .env dibaca Node langsung (bukan env_file) agar parsernya sama dengan lokal.
+      - ../.env:/app/.env:ro
+      - teledrive_data:/app/data
+    stop_grace_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: teledrive-caddy
+    restart: unless-stopped
+    depends_on:
+      - teledrive
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?isi DOMAIN, contoh: DOMAIN=drive.skalingga.my.id}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  teledrive_data:
+  caddy_data:
+  caddy_config:
