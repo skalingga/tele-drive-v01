@@ -13,11 +13,13 @@ import { NewFolderDialog } from "./components/dialogs/NewFolderDialog";
 import { RenameDialog } from "./components/dialogs/RenameDialog";
 import { MoveModal } from "./components/drive/MoveModal";
 import { AuthPage } from "./pages/AuthPage";
-import { Loader2, AlertCircle, X, Trash2 } from "lucide-react";
+import { ItemMenu, driveItemName, type DriveItem, type MenuAnchor, type MenuAction } from "./components/drive/ItemMenu";
+import { Loader2, AlertCircle, X, Trash2, Eye, Download, Edit3, FolderOpen, RotateCcw, XCircle, Star } from "lucide-react";
 
 const PAGE_SIZE = 60;
 const SEARCH_DEBOUNCE_MS = 300;
 const JOB_POLL_MS = 1000;
+const TOAST_MS = 6000;
 
 type Crumb = { id: string | null; name: string };
 
@@ -41,7 +43,7 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortOrder, setSortOrder] = useState<string>("date_desc");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   const [isDark, setIsDark] = useState(() => {
     try {
       return localStorage.getItem("teledrive_theme") !== "light";
@@ -75,6 +77,15 @@ export const App: React.FC = () => {
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [renamingItem, setRenamingItem] = useState<{ type: "folder" | "file"; id: string; name: string } | null>(null);
   const [movingItem, setMovingItem] = useState<{ type: "file" | "folder"; id: string; name: string } | null>(null);
+  const [menu, setMenu] = useState<{ item: DriveItem; anchor: MenuAnchor } | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const [toast, setToast] = useState<{ id: number; message: string; undo?: () => void } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(cur => (cur?.id === toast.id ? null : cur)), TOAST_MS);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   const showError = useCallback((err: unknown) => {
     if ((err as Error)?.name === "AbortError") return;
@@ -271,7 +282,83 @@ export const App: React.FC = () => {
   };
 
   const downloadFile = (f: FileItem) => {
-    window.location.assign(contentUrl(f.id, { download: true }));
+    // A link click (not navigation) so the page never unloads; the server answers with Content-Disposition: attachment.
+    const a = document.createElement("a");
+    a.href = contentUrl(f.id, { download: true });
+    a.download = f.name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const trashItem = (item: DriveItem) => {
+    const name = driveItemName(item);
+    void (async () => {
+      try {
+        if (item.type === "file") await api.deleteFile(item.file.id);
+        else await api.deleteFolder(item.folder.id);
+        await loadDriveData();
+        setToast({
+          id: Date.now(),
+          message: `"${name}" dipindahkan ke sampah`,
+          undo: () => void run(() => (item.type === "file" ? api.restoreFile(item.file.id) : api.restoreFolder(item.folder.id)))()
+        });
+      } catch (err) {
+        showError(err);
+      }
+    })();
+  };
+
+  const restoreItem = (item: DriveItem) =>
+    void run(async () => {
+      if (item.type === "file") await api.restoreFile(item.file.id);
+      else await api.restoreFolder(item.folder.id);
+      setToast({ id: Date.now(), message: `"${driveItemName(item)}" dipulihkan` });
+    })();
+
+  const activateItem = (item: DriveItem) => {
+    if (item.type === "folder") {
+      if (currentTab === "trash") return;
+      setCurrentTab("all");
+      setCurrentFolderId(item.folder.id);
+      setSearchQuery("");
+    } else if (currentTab !== "trash" && item.file.status === "ready") {
+      setPreviewFile(item.file);
+    }
+  };
+
+  const actionsFor = (item: DriveItem): MenuAction[] => {
+    const id = item.type === "file" ? item.file.id : item.folder.id;
+    const name = driveItemName(item);
+    if (currentTab === "trash") {
+      return [
+        { key: "restore", label: "Pulihkan", icon: RotateCcw, onSelect: () => restoreItem(item) },
+        { key: "purge", label: "Hapus permanen", icon: XCircle, danger: true, onSelect: () => handleDeleteForever({ type: item.type, id, name }) }
+      ];
+    }
+    const actions: MenuAction[] = [];
+    if (item.type === "folder") {
+      actions.push({ key: "open", label: "Buka", icon: FolderOpen, onSelect: () => activateItem(item) });
+    } else if (item.file.status === "ready") {
+      const file = item.file;
+      actions.push(
+        { key: "preview", label: "Pratinjau", icon: Eye, onSelect: () => setPreviewFile(file) },
+        { key: "download", label: "Unduh", icon: Download, onSelect: () => downloadFile(file) },
+        {
+          key: "star",
+          label: file.isFavorite ? "Hapus dari favorit" : "Tambah ke favorit",
+          icon: Star,
+          onSelect: () => void run(() => api.toggleFavorite(file.id))()
+        }
+      );
+    }
+    actions.push(
+      { key: "rename", label: "Ganti nama", icon: Edit3, onSelect: () => setRenamingItem({ type: item.type, id, name }) },
+      { key: "move", label: "Pindahkan…", icon: FolderOpen, onSelect: () => setMovingItem({ type: item.type, id, name }) },
+      { key: "trash", label: "Pindahkan ke sampah", icon: Trash2, danger: true, onSelect: () => trashItem(item) }
+    );
+    return actions;
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -300,22 +387,13 @@ export const App: React.FC = () => {
     folders,
     files,
     isTrash,
-    onOpenFolder: (fId: string) => {
-      setCurrentTab("all");
-      setCurrentFolderId(fId);
+    onActivate: activateItem,
+    onOpenMenu: (item: DriveItem, anchor: MenuAnchor) => setMenu({ item, anchor }),
+    onDelete: (item: DriveItem) => {
+      if (!isTrash) trashItem(item);
     },
-    onPreviewFile: (f: FileItem) => setPreviewFile(f),
-    onDownloadFile: downloadFile,
     onToggleStar: (f: FileItem) => void run(() => api.toggleFavorite(f.id))(),
-    onRenameFolder: (fld: Folder) => setRenamingItem({ type: "folder", id: fld.id, name: fld.name }),
-    onDeleteFolder: (fld: Folder) => void run(() => api.deleteFolder(fld.id))(),
-    onRestoreFolder: (fld: Folder) => void run(() => api.restoreFolder(fld.id))(),
-    onRenameFile: (f: FileItem) => setRenamingItem({ type: "file", id: f.id, name: f.name }),
-    onDeleteFile: (f: FileItem) => void run(() => api.deleteFile(f.id))(),
-    onRestoreFile: (f: FileItem) => void run(() => api.restoreFile(f.id))(),
-    onDeleteForever: handleDeleteForever,
-    onMoveItem: handleMoveItem,
-    onMoveRequest: setMovingItem
+    onMoveItem: handleMoveItem
   };
 
   return (
@@ -382,14 +460,14 @@ export const App: React.FC = () => {
         )}
 
         {error && (
-          <div role="alert" className="mx-6 mt-3 flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 dark:text-rose-300">
+          <div role="alert" className="mx-4 md:mx-6 mt-3 flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 dark:text-rose-300">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span className="flex-1">{error}</span>
             <button onClick={() => setError(null)} aria-label="Tutup"><X className="w-4 h-4" /></button>
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {isTrash && (folders.length > 0 || files.length > 0) && (
             <div className="mb-4 flex items-center justify-between rounded-xl bg-slate-100 dark:bg-slate-800/60 px-4 py-3 text-sm">
               <span className="text-slate-600 dark:text-slate-300">Item di sampah bisa dipulihkan sampai Anda menghapusnya permanen.</span>
@@ -431,6 +509,29 @@ export const App: React.FC = () => {
         onClearCompleted={() => setUploadQueue(prev => prev.filter(i => !["completed", "cancelled"].includes(i.status)))}
       />
 
+      {menu && <ItemMenu anchor={menu.anchor} actions={actionsFor(menu.item)} onClose={closeMenu} />}
+
+      {toast && (
+        <div role="status" className="td-toast">
+          <span className="truncate">{toast.message}</span>
+          {toast.undo && (
+            <button
+              type="button"
+              className="td-toast-action"
+              onClick={() => {
+                toast.undo?.();
+                setToast(null);
+              }}
+            >
+              Urungkan
+            </button>
+          )}
+          <button type="button" aria-label="Tutup" onClick={() => setToast(null)} className="opacity-70 hover:opacity-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} onDownload={downloadFile} />
 
       <NewFolderDialog
@@ -442,17 +543,19 @@ export const App: React.FC = () => {
         }}
       />
 
-      <RenameDialog
-        isOpen={!!renamingItem}
-        initialName={renamingItem?.name ?? ""}
-        onClose={() => setRenamingItem(null)}
-        onSubmit={async newName => {
-          if (!renamingItem) return;
-          if (renamingItem.type === "folder") await api.renameFolder(renamingItem.id, newName);
-          else await api.renameFile(renamingItem.id, newName);
-          await loadDriveData();
-        }}
-      />
+      {renamingItem && (
+        <RenameDialog
+          key={renamingItem.id}
+          isOpen
+          initialName={renamingItem.name}
+          onClose={() => setRenamingItem(null)}
+          onSubmit={async newName => {
+            if (renamingItem.type === "folder") await api.renameFolder(renamingItem.id, newName);
+            else await api.renameFile(renamingItem.id, newName);
+            await loadDriveData();
+          }}
+        />
+      )}
 
       {movingItem && (
         <MoveModal

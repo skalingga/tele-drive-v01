@@ -239,6 +239,20 @@
 .file-list-row:hover .td-context-trigger {
   opacity: 1;
 }
+.td-context-trigger.is-on {
+  opacity: 1;
+  color: #f59e0b;
+}
+.td-context-trigger:focus-visible,
+.file-list-row:focus-within .td-context-trigger,
+.td-folder-card:focus-within .td-context-trigger {
+  opacity: 1;
+}
+.file-list-row:focus-visible,
+.td-folder-card:focus-visible {
+  outline: 2px solid var(--td-accent-blue);
+  outline-offset: 2px;
+}
 .td-context-trigger:hover {
   background-color: var(--td-surface-active);
   color: var(--td-text-primary);
@@ -283,8 +297,10 @@
   transition: background-color 150ms ease;
 }
 
-.td-context-item:hover {
+.td-context-item:hover,
+.td-context-item:focus-visible {
   background-color: var(--td-bg-canvas);
+  outline: none;
 }
 .dark .td-context-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
@@ -303,10 +319,43 @@
   background-color: rgba(239, 68, 68, 0.15);
 }
 
+/* Toast (bottom centre; the upload queue sits bottom right) */
+.td-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 13px;
+  box-shadow: var(--td-shadow-dropdown);
+  animation: queueIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dark .td-toast {
+  background: #f9fafb;
+  color: #111827;
+}
+.td-toast-action {
+  font-weight: 700;
+  color: #60a5fa;
+  white-space: nowrap;
+}
+.dark .td-toast-action {
+  color: #2563eb;
+}
+
 /* List Rows - Clean SaaS Style */
 .file-list-row {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) 140px 180px 48px;
+  grid-template-columns: minmax(0, 1fr) 110px 160px 80px;
+  column-gap: 12px;
   min-height: 64px;
   align-items: center;
   background: var(--td-surface);
@@ -447,6 +496,16 @@
 }
 .dark .td-btn-primary:hover {
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 640px) {
+  .file-list-row {
+    grid-template-columns: minmax(0, 1fr) 80px;
+  }
+  .file-list-row > :nth-child(2),
+  .file-list-row > :nth-child(3) {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

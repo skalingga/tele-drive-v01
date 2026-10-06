@@ -39,13 +39,30 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose, onDow
     setTextContent(null);
   }, [file]);
 
+  useEffect(() => {
+    if (!file) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [file, onClose]);
+
   if (!file) return null;
 
   const contentUrl = buildContentUrl(file.id);
   const category = getFileCategory(file.mimeType, file.name);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-fade-in select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Pratinjau ${file.name}`}
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-fade-in select-none"
+    >
       {/* Header */}
       <div className="w-full max-w-5xl flex items-center justify-between py-3 px-4 rounded-2xl bg-slate-900/90 text-white mb-3 shadow-xl border border-slate-800">
         <div className="flex items-center space-x-3 overflow-hidden">
@@ -80,7 +97,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose, onDow
           <button
             onClick={onClose}
             className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Close"
+            title="Tutup (Esc)"
+            aria-label="Tutup"
           >
             <X className="w-5 h-5" />
           </button>

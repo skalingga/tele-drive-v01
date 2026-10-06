@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`h-screen flex flex-col bg-white dark:bg-slate-900 transition-all duration-300 select-none z-30 ${
-        isCollapsed ? "w-24" : "w-[280px]"
+        isCollapsed ? "w-16 md:w-24" : "w-[280px]"
       }`}
     >
       <div className="h-[100px] flex items-center px-8">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Edit3, X } from "lucide-react";
 
 interface RenameDialogProps {
@@ -12,11 +12,35 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({ isOpen, initialName,
   const [name, setName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(initialName);
     setError(null);
   }, [initialName, isOpen]);
+
+  // Select the name without its extension, so typing replaces "report" and keeps ".pdf".
+  useEffect(() => {
+    if (!isOpen) return;
+    // Next frame: the menu that opened this dialog hands focus back to its button while closing.
+    const raf = requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      const dot = initialName.lastIndexOf(".");
+      el.focus();
+      el.setSelectionRange(0, dot > 0 ? dot : initialName.length);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isOpen, initialName]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -64,8 +88,8 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({ isOpen, initialName,
             <input
               type="text"
               value={name}
+              ref={inputRef}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
             />
           </div>
