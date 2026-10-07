@@ -13,6 +13,7 @@ TeleDrive v1.3 berjalan: login QR Telegram, upload/download ke channel "TeleDriv
 
 ## Sedang dikerjakan
 - Deploy produksi ke VPS (Ubuntu 24.04, 2 vCPU/2 GB) di `drive.skalingga.my.id`: file siap (`deploy/`, `docs/DEPLOY.md`), menunggu user menjalankan di VPS.
+- Opsi hemat biaya: laptop bekas (Windows → Ubuntu Server 24.04) + Cloudflare Tunnel; file siap (`deploy/docker-compose.tunnel.yml`, `docs/DEPLOY-LAPTOP.md`). Laptop belum dicek kelayakannya.
 
 ## Langkah berikutnya
 0. User: ikuti `docs/DEPLOY.md` di VPS (DNS A record `drive` → IP VPS, deploy key, isi `.env`, `docker compose up`). Vercel tidak cocok (butuh proses long-running + SQLite).

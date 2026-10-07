@@ -1,0 +1,47 @@
+# Produksi di rumah (laptop): TeleDrive (1 instance) + Cloudflare Tunnel.
+# Tanpa IP publik, tanpa buka port router; HTTPS ditangani Cloudflare.
+#
+# Mode tetap (domain sendiri, butuh TUNNEL_TOKEN di deploy/.env):
+#   docker compose -f deploy/docker-compose.tunnel.yml up -d --build
+# Mode cepat (tanpa domain, alamat acak *.trycloudflare.com):
+#   docker compose -f deploy/docker-compose.tunnel.yml --profile quick up -d --build teledrive cloudflared-quick
+#   docker logs teledrive-tunnel-quick   # cari baris https://xxxx.trycloudflare.com
+services:
+  teledrive:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: teledrive
+    restart: unless-stopped
+    # Tepat SATU instance: proses ini pemilik semua session MTProto (ADR-007).
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"
+    volumes:
+      - ../.env:/app/.env:ro
+      - teledrive_data:/app/data
+    stop_grace_period: 30s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: teledrive-tunnel
+    restart: unless-stopped
+    depends_on:
+      - teledrive
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?isi TUNNEL_TOKEN di deploy/.env (lihat docs/DEPLOY-LAPTOP.md)}
+
+  cloudflared-quick:
+    profiles: ["quick"]
+    image: cloudflare/cloudflared:latest
+    container_name: teledrive-tunnel-quick
+    restart: unless-stopped
+    depends_on:
+      - teledrive
+    command: tunnel --no-autoupdate --url http://teledrive:3000
+
+volumes:
+  teledrive_data:
